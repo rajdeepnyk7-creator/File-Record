@@ -1,46 +1,215 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Office Record Dashboard</title>
+  <title>TP Office Record Portal</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    select, input { padding: 6px; margin: 5px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-    th { background: #f2f2f2; }
-    .table-container { overflow-x: auto; max-height: 600px; }
-  </style>
+
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f4f6f9;
+  transition: 0.3s;
+}
+
+header {
+  background: #1e3a5f;
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h2 {
+  margin: 0;
+}
+
+.toggle-btn {
+  background: white;
+  color: #1e3a5f;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.container {
+  padding: 20px;
+}
+
+.filter-card {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+select, input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.table-container {
+  margin-top: 20px;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  overflow-x: auto;
+  max-height: 600px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+th {
+  background: #1e3a5f;
+  color: white;
+  position: sticky;
+  top: 0;
+}
+
+tr:nth-child(even) { background: #f9f9f9; }
+tr:hover { background: #eef5ff; }
+
+#resultCount {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+/* Dark Mode */
+.dark {
+  background: #1e1e1e;
+  color: white;
+}
+
+.dark .filter-card,
+.dark .table-container {
+  background: #2c2c2c;
+}
+
+.dark th {
+  background: #444;
+}
+
+.dark tr:nth-child(even) {
+  background: #333;
+}
+
+/* Login Screen */
+#loginScreen {
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  background: #1e3a5f;
+}
+
+.login-box {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.login-box input {
+  margin: 10px;
+  padding: 8px;
+  width: 200px;
+}
+
+.login-box button {
+  padding: 8px 15px;
+  background: #1e3a5f;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+@media print {
+  header, .filter-card, .toggle-btn {
+    display: none;
+  }
+}
+</style>
 </head>
 <body>
 
-<h2>Office Record Filter</h2>
+<div id="loginScreen">
+  <div class="login-box">
+    <h3>TP Office Login</h3>
+    <input type="password" id="password" placeholder="Enter Password">
+    <br>
+    <button onclick="login()">Login</button>
+  </div>
+</div>
 
-<select id="tpFilter">
-  <option value="">All TP Schemes</option>
-</select>
+<div id="mainApp" style="display:none;">
 
-<select id="plotFilter">
-  <option value="">All Final Plot Numbers</option>
-</select>
+<header>
+  <h2>Town Planning Office Record System</h2>
+  <button class="toggle-btn" onclick="toggleDark()">Dark Mode</button>
+</header>
 
-<input type="text" id="addressSearch" placeholder="Search by Address...">
+<div class="container">
 
-<h3 id="resultCount"></h3>
+<div class="filter-card">
+  <select id="tpFilter">
+    <option value="">All TP Schemes</option>
+  </select>
+
+  <select id="plotFilter">
+    <option value="">All Final Plots</option>
+  </select>
+
+  <input type="text" id="addressSearch" placeholder="Search Address">
+</div>
+
+<div id="resultCount"></div>
 
 <div class="table-container">
   <table>
-    <thead>
-      <tr id="tableHead"></tr>
-    </thead>
+    <thead><tr id="tableHead"></tr></thead>
     <tbody id="tableBody"></tbody>
   </table>
+</div>
+
+</div>
 </div>
 
 <script>
 let allData = [];
 let filteredData = [];
 let headers = [];
+
+function login() {
+  const pass = document.getElementById("password").value;
+  if (pass === "tp123") {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("mainApp").style.display = "block";
+    loadData();
+  } else {
+    alert("Wrong Password");
+  }
+}
+
+function toggleDark() {
+  document.body.classList.toggle("dark");
+}
 
 async function loadData() {
   const response = await fetch("File Record N9.csv");
@@ -53,29 +222,35 @@ async function loadData() {
       allData = results.data;
       filteredData = allData;
       headers = Object.keys(allData[0]);
-      populateDropdowns();
+      populateTP();
       displayTable(filteredData);
     }
   });
 }
 
-function populateDropdowns() {
+function populateTP() {
   const tpSet = new Set();
-  const plotSet = new Set();
-
   allData.forEach(row => {
     if (row["T.P SCHEME NUMBER"])
       tpSet.add(row["T.P SCHEME NUMBER"]);
-    if (row["FINAL PLOT NUMBER"])
-      plotSet.add(row["FINAL PLOT NUMBER"]);
   });
 
   const tpSelect = document.getElementById("tpFilter");
   tpSet.forEach(value => {
     tpSelect.innerHTML += `<option value="${value}">${value}</option>`;
   });
+}
 
+function populatePlots(tpValue) {
   const plotSelect = document.getElementById("plotFilter");
+  plotSelect.innerHTML = '<option value="">All Final Plots</option>';
+
+  const plotSet = new Set();
+  allData.forEach(row => {
+    if (row["T.P SCHEME NUMBER"] === tpValue)
+      plotSet.add(row["FINAL PLOT NUMBER"]);
+  });
+
   plotSet.forEach(value => {
     plotSelect.innerHTML += `<option value="${value}">${value}</option>`;
   });
@@ -88,7 +263,6 @@ function filterData() {
 
   filteredData = allData.filter(row => {
     const address = (row["ADDRESS"] || "").toLowerCase();
-
     return (
       (tpValue === "" || row["T.P SCHEME NUMBER"] === tpValue) &&
       (plotValue === "" || row["FINAL PLOT NUMBER"] === plotValue) &&
@@ -133,14 +307,16 @@ function displayTable(data) {
   });
 
   document.getElementById("resultCount").innerText =
-    "Showing " + data.length + " results";
+    "Showing " + data.length + " records";
 }
 
-document.getElementById("tpFilter").addEventListener("change", filterData);
+document.getElementById("tpFilter").addEventListener("change", function() {
+  populatePlots(this.value);
+  filterData();
+});
 document.getElementById("plotFilter").addEventListener("change", filterData);
 document.getElementById("addressSearch").addEventListener("input", filterData);
 
-loadData();
 </script>
 
 </body>
