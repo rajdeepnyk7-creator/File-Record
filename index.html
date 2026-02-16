@@ -5,25 +5,26 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
-    input, select { padding: 6px; margin: 5px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; }
+    select, input { padding: 6px; margin: 5px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
     th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-    th { cursor: pointer; background-color: #f2f2f2; position: sticky; top: 0; }
-    th:hover { background-color: #ddd; }
-    button { padding: 6px 10px; margin: 5px; }
+    th { background: #f2f2f2; }
     .table-container { overflow-x: auto; max-height: 600px; }
   </style>
 </head>
 <body>
 
-<h2>Office Record Dashboard</h2>
+<h2>Office Record Filter</h2>
 
-<input type="text" id="searchInput" placeholder="Live search...">
+<select id="tpFilter">
+  <option value="">All TP Schemes</option>
+</select>
 
-<select id="tpFilter"></select>
-<select id="architectFilter"></select>
+<select id="plotFilter">
+  <option value="">All Final Plot Numbers</option>
+</select>
 
-<button onclick="downloadCSV()">Download Filtered CSV</button>
+<input type="text" id="addressSearch" placeholder="Search by Address...">
 
 <h3 id="resultCount"></h3>
 
@@ -60,39 +61,38 @@ async function loadData() {
 
 function populateDropdowns() {
   const tpSet = new Set();
-  const architectSet = new Set();
+  const plotSet = new Set();
 
   allData.forEach(row => {
     if (row["T.P SCHEME NUMBER"])
       tpSet.add(row["T.P SCHEME NUMBER"]);
-    if (row["ARCH./ENGG. NAME"])
-      architectSet.add(row["ARCH./ENGG. NAME"]);
+    if (row["FINAL PLOT NUMBER"])
+      plotSet.add(row["FINAL PLOT NUMBER"]);
   });
 
   const tpSelect = document.getElementById("tpFilter");
-  tpSelect.innerHTML = '<option value="">All TP Schemes</option>';
   tpSet.forEach(value => {
     tpSelect.innerHTML += `<option value="${value}">${value}</option>`;
   });
 
-  const archSelect = document.getElementById("architectFilter");
-  archSelect.innerHTML = '<option value="">All Architects</option>';
-  architectSet.forEach(value => {
-    archSelect.innerHTML += `<option value="${value}">${value}</option>`;
+  const plotSelect = document.getElementById("plotFilter");
+  plotSet.forEach(value => {
+    plotSelect.innerHTML += `<option value="${value}">${value}</option>`;
   });
 }
 
 function filterData() {
-  const searchValue = document.getElementById("searchInput").value.toLowerCase();
   const tpValue = document.getElementById("tpFilter").value;
-  const architectValue = document.getElementById("architectFilter").value;
+  const plotValue = document.getElementById("plotFilter").value;
+  const addressValue = document.getElementById("addressSearch").value.toLowerCase();
 
   filteredData = allData.filter(row => {
-    const combined = JSON.stringify(row).toLowerCase();
+    const address = (row["ADDRESS"] || "").toLowerCase();
+
     return (
-      (searchValue === "" || combined.includes(searchValue)) &&
       (tpValue === "" || row["T.P SCHEME NUMBER"] === tpValue) &&
-      (architectValue === "" || row["ARCH./ENGG. NAME"] === architectValue)
+      (plotValue === "" || row["FINAL PLOT NUMBER"] === plotValue) &&
+      (addressValue === "" || address.includes(addressValue))
     );
   });
 
@@ -112,11 +112,7 @@ function displayTable(data) {
   }
 
   headers.forEach(header => {
-    tableHead.innerHTML += `<th onclick="sortTable('${header}')">${header}</th>`;
-  });
-
-  headers.forEach(header => {
-    // ensure PDF column stays clickable later
+    tableHead.innerHTML += `<th>${header}</th>`;
   });
 
   data.forEach(row => {
@@ -140,25 +136,9 @@ function displayTable(data) {
     "Showing " + data.length + " results";
 }
 
-function sortTable(column) {
-  filteredData.sort((a, b) => {
-    return (a[column] || "").localeCompare(b[column] || "");
-  });
-  displayTable(filteredData);
-}
-
-function downloadCSV() {
-  const csv = Papa.unparse(filteredData);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "filtered_records.csv";
-  link.click();
-}
-
-document.getElementById("searchInput").addEventListener("input", filterData);
 document.getElementById("tpFilter").addEventListener("change", filterData);
-document.getElementById("architectFilter").addEventListener("change", filterData);
+document.getElementById("plotFilter").addEventListener("change", filterData);
+document.getElementById("addressSearch").addEventListener("input", filterData);
 
 loadData();
 </script>
