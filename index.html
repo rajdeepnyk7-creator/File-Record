@@ -1,35 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Office Project Records</title>
+  <title>Office Record Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
-    input, select { padding: 8px; margin: 5px; }
-    .card { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+    input, select { padding: 6px; margin: 5px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    th { cursor: pointer; background-color: #f2f2f2; position: sticky; top: 0; }
+    th:hover { background-color: #ddd; }
+    button { padding: 6px 10px; margin: 5px; }
+    .table-container { overflow-x: auto; max-height: 600px; }
   </style>
 </head>
 <body>
 
-<h2>Office Project Search</h2>
+<h2>Office Record Dashboard</h2>
 
-<input type="text" id="searchInput" placeholder="General search...">
+<input type="text" id="searchInput" placeholder="Live search...">
 
-<select id="tpFilter">
-  <option value="">All TP Schemes</option>
-</select>
+<select id="tpFilter"></select>
+<select id="architectFilter"></select>
 
-<select id="architectFilter">
-  <option value="">All Architects</option>
-</select>
+<button onclick="downloadCSV()">Download Filtered CSV</button>
 
-<button onclick="filterData()">Search</button>
+<h3 id="resultCount"></h3>
 
-<div id="resultCount"></div>
-<div id="output"></div>
+<div class="table-container">
+  <table>
+    <thead>
+      <tr id="tableHead"></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
 
 <script>
 let allData = [];
+let filteredData = [];
+let headers = [];
 
 async function loadData() {
   const response = await fetch("File Record N9.csv");
@@ -40,7 +50,10 @@ async function loadData() {
     skipEmptyLines: true,
     complete: function(results) {
       allData = results.data;
+      filteredData = allData;
+      headers = Object.keys(allData[0]);
       populateDropdowns();
+      displayTable(filteredData);
     }
   });
 }
@@ -57,11 +70,13 @@ function populateDropdowns() {
   });
 
   const tpSelect = document.getElementById("tpFilter");
+  tpSelect.innerHTML = '<option value="">All TP Schemes</option>';
   tpSet.forEach(value => {
     tpSelect.innerHTML += `<option value="${value}">${value}</option>`;
   });
 
   const archSelect = document.getElementById("architectFilter");
+  archSelect.innerHTML = '<option value="">All Architects</option>';
   architectSet.forEach(value => {
     archSelect.innerHTML += `<option value="${value}">${value}</option>`;
   });
@@ -72,38 +87,78 @@ function filterData() {
   const tpValue = document.getElementById("tpFilter").value;
   const architectValue = document.getElementById("architectFilter").value;
 
-  let resultHTML = "";
-  let count = 0;
-
-  allData.forEach(row => {
+  filteredData = allData.filter(row => {
     const combined = JSON.stringify(row).toLowerCase();
-
-    if (
+    return (
       (searchValue === "" || combined.includes(searchValue)) &&
       (tpValue === "" || row["T.P SCHEME NUMBER"] === tpValue) &&
       (architectValue === "" || row["ARCH./ENGG. NAME"] === architectValue)
-    ) {
-      count++;
-
-      resultHTML += `
-        <div class="card">
-          <p><strong>File No:</strong> ${row["FILE NUMBER"] || ""}</p>
-          <p><strong>Case No:</strong> ${row["CASE NUMBER"] || ""}</p>
-          <p><strong>TP Scheme:</strong> ${row["T.P SCHEME NUMBER"] || ""}</p>
-          <p><strong>Final Plot:</strong> ${row["FINAL PLOT NUMBER"] || ""}</p>
-          <p><strong>Address:</strong> ${row["ADDRESS"] || ""}</p>
-          <p><strong>Architect:</strong> ${row["ARCH./ENGG. NAME"] || ""}</p>
-        </div>
-      `;
-    }
+    );
   });
 
-  document.getElementById("resultCount").innerHTML =
-    "<h3>Showing " + count + " results</h3>";
-
-  document.getElementById("output").innerHTML =
-    resultHTML || "<p>No results found</p>";
+  displayTable(filteredData);
 }
+
+function displayTable(data) {
+  const tableHead = document.getElementById("tableHead");
+  const tableBody = document.getElementById("tableBody");
+
+  tableHead.innerHTML = "";
+  tableBody.innerHTML = "";
+
+  if (data.length === 0) {
+    document.getElementById("resultCount").innerText = "No results found";
+    return;
+  }
+
+  headers.forEach(header => {
+    tableHead.innerHTML += `<th onclick="sortTable('${header}')">${header}</th>`;
+  });
+
+  headers.forEach(header => {
+    // ensure PDF column stays clickable later
+  });
+
+  data.forEach(row => {
+    let rowHTML = "<tr>";
+    headers.forEach(header => {
+      if (header === "PDF OF RAJACHITTHI") {
+        rowHTML += `<td>
+          ${row[header] ? 
+          `<a href="${row[header]}" target="_blank">View PDF</a>` 
+          : ""}
+        </td>`;
+      } else {
+        rowHTML += `<td>${row[header] || ""}</td>`;
+      }
+    });
+    rowHTML += "</tr>";
+    tableBody.innerHTML += rowHTML;
+  });
+
+  document.getElementById("resultCount").innerText =
+    "Showing " + data.length + " results";
+}
+
+function sortTable(column) {
+  filteredData.sort((a, b) => {
+    return (a[column] || "").localeCompare(b[column] || "");
+  });
+  displayTable(filteredData);
+}
+
+function downloadCSV() {
+  const csv = Papa.unparse(filteredData);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "filtered_records.csv";
+  link.click();
+}
+
+document.getElementById("searchInput").addEventListener("input", filterData);
+document.getElementById("tpFilter").addEventListener("change", filterData);
+document.getElementById("architectFilter").addEventListener("change", filterData);
 
 loadData();
 </script>
