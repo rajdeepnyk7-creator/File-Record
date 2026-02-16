@@ -5,8 +5,7 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
-    input { padding: 8px; width: 300px; }
-    button { padding: 8px; }
+    input, select { padding: 8px; margin: 5px; }
     .card { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
   </style>
 </head>
@@ -14,13 +13,25 @@
 
 <h2>Office Project Search</h2>
 
-<input type="text" id="searchInput" placeholder="Search by file no, case no, address...">
-<button onclick="searchCSV()">Search</button>
+<input type="text" id="searchInput" placeholder="General search...">
 
+<select id="tpFilter">
+  <option value="">All TP Schemes</option>
+</select>
+
+<select id="architectFilter">
+  <option value="">All Architects</option>
+</select>
+
+<button onclick="filterData()">Search</button>
+
+<div id="resultCount"></div>
 <div id="output"></div>
 
 <script>
-async function searchCSV() {
+let allData = [];
+
+async function loadData() {
   const response = await fetch("File Record N9.csv");
   const csvText = await response.text();
 
@@ -28,33 +39,73 @@ async function searchCSV() {
     header: true,
     skipEmptyLines: true,
     complete: function(results) {
-      const data = results.data;
-      const searchValue = document.getElementById("searchInput").value.toLowerCase();
-      let resultHTML = "";
-
-      data.forEach(row => {
-        const combined = JSON.stringify(row).toLowerCase();
-
-        if (combined.includes(searchValue)) {
-          resultHTML += `
-            <div class="card">
-              <p><strong>File No:</strong> ${row["FILE NUMBER"] || ""}</p>
-              <p><strong>Inward No:</strong> ${row["INWARD NUMBER "] || ""}</p>
-              <p><strong>Case No:</strong> ${row["CASE NUMBER"] || ""}</p>
-              <p><strong>TP Scheme:</strong> ${row["T.P SCHEME NUMBER"] || ""}</p>
-              <p><strong>Final Plot:</strong> ${row["FINAL PLOT NUMBER"] || ""}</p>
-              <p><strong>Address:</strong> ${row["ADDRESS"] || ""}</p>
-              <p><strong>Architect:</strong> ${row["ARCH./ENGG. NAME"] || ""}</p>
-            </div>
-          `;
-        }
-      });
-
-      document.getElementById("output").innerHTML =
-        resultHTML || "<p>No results found</p>";
+      allData = results.data;
+      populateDropdowns();
     }
   });
 }
+
+function populateDropdowns() {
+  const tpSet = new Set();
+  const architectSet = new Set();
+
+  allData.forEach(row => {
+    if (row["T.P SCHEME NUMBER"])
+      tpSet.add(row["T.P SCHEME NUMBER"]);
+    if (row["ARCH./ENGG. NAME"])
+      architectSet.add(row["ARCH./ENGG. NAME"]);
+  });
+
+  const tpSelect = document.getElementById("tpFilter");
+  tpSet.forEach(value => {
+    tpSelect.innerHTML += `<option value="${value}">${value}</option>`;
+  });
+
+  const archSelect = document.getElementById("architectFilter");
+  architectSet.forEach(value => {
+    archSelect.innerHTML += `<option value="${value}">${value}</option>`;
+  });
+}
+
+function filterData() {
+  const searchValue = document.getElementById("searchInput").value.toLowerCase();
+  const tpValue = document.getElementById("tpFilter").value;
+  const architectValue = document.getElementById("architectFilter").value;
+
+  let resultHTML = "";
+  let count = 0;
+
+  allData.forEach(row => {
+    const combined = JSON.stringify(row).toLowerCase();
+
+    if (
+      (searchValue === "" || combined.includes(searchValue)) &&
+      (tpValue === "" || row["T.P SCHEME NUMBER"] === tpValue) &&
+      (architectValue === "" || row["ARCH./ENGG. NAME"] === architectValue)
+    ) {
+      count++;
+
+      resultHTML += `
+        <div class="card">
+          <p><strong>File No:</strong> ${row["FILE NUMBER"] || ""}</p>
+          <p><strong>Case No:</strong> ${row["CASE NUMBER"] || ""}</p>
+          <p><strong>TP Scheme:</strong> ${row["T.P SCHEME NUMBER"] || ""}</p>
+          <p><strong>Final Plot:</strong> ${row["FINAL PLOT NUMBER"] || ""}</p>
+          <p><strong>Address:</strong> ${row["ADDRESS"] || ""}</p>
+          <p><strong>Architect:</strong> ${row["ARCH./ENGG. NAME"] || ""}</p>
+        </div>
+      `;
+    }
+  });
+
+  document.getElementById("resultCount").innerHTML =
+    "<h3>Showing " + count + " results</h3>";
+
+  document.getElementById("output").innerHTML =
+    resultHTML || "<p>No results found</p>";
+}
+
+loadData();
 </script>
 
 </body>
