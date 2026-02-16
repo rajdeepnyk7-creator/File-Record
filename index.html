@@ -4,7 +4,8 @@
   <title>Office Project Records</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    input { padding: 8px; width: 250px; }
+    input { padding: 8px; width: 300px; }
+    button { padding: 8px; }
     .card { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
   </style>
 </head>
@@ -12,40 +13,53 @@
 
 <h2>Office Project Search</h2>
 
-<input type="text" id="searchInput" placeholder="Search project...">
+<input type="text" id="searchInput" placeholder="Search by file no, case no, address, architect...">
 <button onclick="loadCSV()">Search</button>
 
 <div id="output"></div>
 
 <script>
 async function loadCSV() {
-    const response = await fetch("projects.csv");
+    const response = await fetch("File Record N9.csv");
     const data = await response.text();
-    
+
     const rows = data.split("\n").slice(1);
     const searchValue = document.getElementById("searchInput").value.toLowerCase();
-    
+
     let resultHTML = "";
 
     rows.forEach(row => {
         const columns = row.split(",");
-        if(columns.length > 1){
-          const name = columns[1].toLowerCase();
-          const location = columns[2].toLowerCase();
-          const status = columns[3].toLowerCase();
+
+        if(columns.length > 10){
+
+          const fileNo = columns[2]?.toLowerCase();
+          const inwardNo = columns[3]?.toLowerCase();
+          const caseNo = columns[5]?.toLowerCase();
+          const tpScheme = columns[8]?.toLowerCase();
+          const finalPlot = columns[9]?.toLowerCase();
+          const address = columns[12]?.toLowerCase();
+          const architect = columns[13]?.toLowerCase();
 
           if (
-            name.includes(searchValue) ||
-            location.includes(searchValue) ||
-            status.includes(searchValue)
+            fileNo?.includes(searchValue) ||
+            inwardNo?.includes(searchValue) ||
+            caseNo?.includes(searchValue) ||
+            tpScheme?.includes(searchValue) ||
+            finalPlot?.includes(searchValue) ||
+            address?.includes(searchValue) ||
+            architect?.includes(searchValue)
           ) {
+
             resultHTML += `
             <div class="card">
-                <p><strong>ID:</strong> ${columns[0]}</p>
-                <p><strong>Name:</strong> ${columns[1]}</p>
-                <p><strong>Location:</strong> ${columns[2]}</p>
-                <p><strong>Status:</strong> ${columns[3]}</p>
-                <p><strong>Budget:</strong> ${columns[4]}</p>
+                <p><strong>File No:</strong> ${columns[2]}</p>
+                <p><strong>Inward No:</strong> ${columns[3]}</p>
+                <p><strong>Case No:</strong> ${columns[5]}</p>
+                <p><strong>TP Scheme:</strong> ${columns[8]}</p>
+                <p><strong>Final Plot:</strong> ${columns[9]}</p>
+                <p><strong>Address:</strong> ${columns[12]}</p>
+                <p><strong>Architect:</strong> ${columns[13]}</p>
             </div>
             `;
           }
@@ -54,7 +68,4 @@ async function loadCSV() {
 
     document.getElementById("output").innerHTML = resultHTML || "No results found";
 }
-</script>
-
-</body>
-</html>
+</
