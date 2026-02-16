@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Office Project Records</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
     input { padding: 8px; width: 300px; }
@@ -13,59 +14,48 @@
 
 <h2>Office Project Search</h2>
 
-<input type="text" id="searchInput" placeholder="Search by file no, case no, address, architect...">
-<button onclick="loadCSV()">Search</button>
+<input type="text" id="searchInput" placeholder="Search by file no, case no, address...">
+<button onclick="searchCSV()">Search</button>
 
 <div id="output"></div>
 
 <script>
-async function loadCSV() {
-    const response = await fetch("File Record N9.csv");
-    const data = await response.text();
+async function searchCSV() {
+  const response = await fetch("File Record N9.csv");
+  const csvText = await response.text();
 
-    const rows = data.split("\n").slice(1);
-    const searchValue = document.getElementById("searchInput").value.toLowerCase();
+  Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      const data = results.data;
+      const searchValue = document.getElementById("searchInput").value.toLowerCase();
+      let resultHTML = "";
 
-    let resultHTML = "";
+      data.forEach(row => {
+        const combined = JSON.stringify(row).toLowerCase();
 
-    rows.forEach(row => {
-        const columns = row.split(",");
-
-        if(columns.length > 10){
-
-          const fileNo = columns[2]?.toLowerCase();
-          const inwardNo = columns[3]?.toLowerCase();
-          const caseNo = columns[5]?.toLowerCase();
-          const tpScheme = columns[8]?.toLowerCase();
-          const finalPlot = columns[9]?.toLowerCase();
-          const address = columns[12]?.toLowerCase();
-          const architect = columns[13]?.toLowerCase();
-
-          if (
-            fileNo?.includes(searchValue) ||
-            inwardNo?.includes(searchValue) ||
-            caseNo?.includes(searchValue) ||
-            tpScheme?.includes(searchValue) ||
-            finalPlot?.includes(searchValue) ||
-            address?.includes(searchValue) ||
-            architect?.includes(searchValue)
-          ) {
-
-            resultHTML += `
+        if (combined.includes(searchValue)) {
+          resultHTML += `
             <div class="card">
-                <p><strong>File No:</strong> ${columns[2]}</p>
-                <p><strong>Inward No:</strong> ${columns[3]}</p>
-                <p><strong>Case No:</strong> ${columns[5]}</p>
-                <p><strong>TP Scheme:</strong> ${columns[8]}</p>
-                <p><strong>Final Plot:</strong> ${columns[9]}</p>
-                <p><strong>Address:</strong> ${columns[12]}</p>
-                <p><strong>Architect:</strong> ${columns[13]}</p>
+              <p><strong>File No:</strong> ${row["FILE NUMBER"] || ""}</p>
+              <p><strong>Inward No:</strong> ${row["INWARD NUMBER "] || ""}</p>
+              <p><strong>Case No:</strong> ${row["CASE NUMBER"] || ""}</p>
+              <p><strong>TP Scheme:</strong> ${row["T.P SCHEME NUMBER"] || ""}</p>
+              <p><strong>Final Plot:</strong> ${row["FINAL PLOT NUMBER"] || ""}</p>
+              <p><strong>Address:</strong> ${row["ADDRESS"] || ""}</p>
+              <p><strong>Architect:</strong> ${row["ARCH./ENGG. NAME"] || ""}</p>
             </div>
-            `;
-          }
+          `;
         }
-    });
+      });
 
-    document.getElementById("output").innerHTML = resultHTML || "No results found";
+      document.getElementById("output").innerHTML =
+        resultHTML || "<p>No results found</p>";
+    }
+  });
 }
-</
+</script>
+
+</body>
+</html>
