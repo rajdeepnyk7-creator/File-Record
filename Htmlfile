@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Office Project Records</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input { padding: 8px; width: 250px; }
+    .card { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>Office Project Search</h2>
+
+<input type="text" id="searchInput" placeholder="Search project...">
+<button onclick="loadCSV()">Search</button>
+
+<div id="output"></div>
+
+<script>
+async function loadCSV() {
+    const response = await fetch("projects.csv");
+    const data = await response.text();
+    
+    const rows = data.split("\n").slice(1);
+    const searchValue = document.getElementById("searchInput").value.toLowerCase();
+    
+    let resultHTML = "";
+
+    rows.forEach(row => {
+        const columns = row.split(",");
+        if(columns.length > 1){
+          const name = columns[1].toLowerCase();
+          const location = columns[2].toLowerCase();
+          const status = columns[3].toLowerCase();
+
+          if (
+            name.includes(searchValue) ||
+            location.includes(searchValue) ||
+            status.includes(searchValue)
+          ) {
+            resultHTML += `
+            <div class="card">
+                <p><strong>ID:</strong> ${columns[0]}</p>
+                <p><strong>Name:</strong> ${columns[1]}</p>
+                <p><strong>Location:</strong> ${columns[2]}</p>
+                <p><strong>Status:</strong> ${columns[3]}</p>
+                <p><strong>Budget:</strong> ${columns[4]}</p>
+            </div>
+            `;
+          }
+        }
+    });
+
+    document.getElementById("output").innerHTML = resultHTML || "No results found";
+}
+</script>
+
+</body>
+</html>
